@@ -1,13 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, Length } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateProveedorDto {
   @IsString()
-  @IsNotEmpty({ message: 'La razón social no puede estar vacía' })
+  @IsNotEmpty({ message: 'La razón social es obligatoria' })
   razonSocial: string;
 
   @IsString()
-  @IsNotEmpty()
-  @Length(11, 11, { message: 'El RUC debe tener exactamente 11 caracteres' })
+  @IsNotEmpty({ message: 'El RUC es obligatorio' })
   ruc: string;
 
   @IsString()
@@ -15,6 +14,10 @@ export class CreateProveedorDto {
   pais: string;
 
   @IsString()
-  @IsOptional() 
+  @IsOptional()
   contacto?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  activo?: boolean;
 }

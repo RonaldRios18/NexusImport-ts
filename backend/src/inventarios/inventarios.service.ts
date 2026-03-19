@@ -1,36 +1,58 @@
-import { Injectable } from '@nestjs/common';
-import { CreateInventarioDto } from './dto/create-inventario.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class InventariosService {
   constructor(private prisma: PrismaService) {}
 
-  // Este método recibe mercadería y suma el stock a la sede correcta
-  async ingresarMercaderia(createInventarioDto: CreateInventarioDto) {
-    const { productoId, sedeId, cantidad } = createInventarioDto;
-
-    // "upsert" busca si la Laptop ya está en esa Sede.
-    return this.prisma.inventarioSede.upsert({
-      where: {
-        productoId_sedeId: { productoId, sedeId },
-      },
-      // Si la laptop ya estaba en esa sede, le SUMA la nueva cantidad
-      update: {
-        cantidad: { increment: cantidad },
-      },
-      // Si es la primera vez que llega a esta sede, crea el registro
-      create: {
-        productoId,
-        sedeId,
-        cantidad,
-      },
+  // 1. Ver todo el stock global (Dashboard Admin)
+  findAll() {
+    return this.prisma.inventarioSede.findMany({
+      include: {
+        producto: { select: { nombre: true, precio: true, estado: true } },
+        sede: { select: { nombre: true, ciudad: true } }
+      }
     });
   }
 
-  findAll() {
+  // 2. Ver stock de una sede específica
+  async findBySede(sedeId: string) {
     return this.prisma.inventarioSede.findMany({
-      include: { producto: true, sede: true }
+      where: { sedeId },
+      include: { producto: true }
+    });
+  }
+
+  // 3. INGRESO DE MERCADERÍA (Suma al stock existente)
+  async ingresarStock(productoId: string, sedeId: string, cantidad: number) {
+    if (cantidad <= 0) throw new BadRequestException('La cantidad a ingresar debe ser mayor a 0');
+
+    return this.prisma.inventarioSede.upsert({
+      where: { productoId_sedeId: { productoId, sedeId } },
+      update: { cantidad: { increment: cantidad } }, // Suma atómica
+      create: { productoId, sedeId, cantidad }
+    });
+  }
+
+  // 4. AJUSTE MANUAL (Para corregir errores de inventario físico)
+  async ajusteManual(productoId: string, sedeId: string, nuevaCantidad: number) {
+    if (nuevaCantidad < 0) throw new BadRequestException('El stock no puede ser negativo');
+
+    try {
+      return await this.prisma.inventarioSede.update({
+        where: { productoId_sedeId: { productoId, sedeId } },
+        data: { cantidad: nuevaCantidad }
+      });
+    } catch (error) {
+      throw new NotFoundException('No se encontró el registro de inventario para ajustar');
+    }
+  }
+
+  // 5. Consultar stock de un producto específico en todas las sedes
+  async findByProducto(productoId: string) {
+    return this.prisma.inventarioSede.findMany({
+      where: { productoId },
+      include: { sede: true }
     });
   }
 }

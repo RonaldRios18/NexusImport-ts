@@ -7,6 +7,41 @@ datasource db {
 }
 
 // ==========================================
+// 🔴 ENUMS: MÁQUINAS DE ESTADO
+// ==========================================
+
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+  BLOQUEADO
+}
+
+enum EstadoEmpleado {
+  ACTIVO
+  VACACIONES
+  LICENCIA
+  DESPEDIDO
+  RENUNCIADO
+}
+
+enum EstadoProducto {
+  ACTIVO
+  AGOTADO
+  DESCONTINUADO
+  EN_TRANSITO
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  PAGADO
+  EN_PREPARACION
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+  DEVOLUCION
+}
+
+// ==========================================
 // 🏭 MÓDULO DE INVENTARIO Y COMPRAS
 // ==========================================
 
@@ -16,28 +51,40 @@ model Proveedor {
   ruc         String     @unique
   pais        String     
   contacto    String?
+  activo      Boolean    @default(true) 
   productos   Producto[] 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
 
 model Producto {
-  id          String     @id @default(uuid())
+  id          String         @id @default(uuid())
   nombre      String
   precio      Float
-  // ¡Adiós stock global! Ahora se maneja por sede
-  categoria   String
+  estado      EstadoProducto @default(ACTIVO) 
+  
+  categoria   Categoria      @relation(fields: [categoriaId], references: [id])
+  categoriaId String
+  
+  imagen      String?   
   marca       String?  
   detalles    String?
   
-  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+  proveedor   Proveedor?     @relation(fields: [proveedorId], references: [id])
   proveedorId String?    
   
-  detallesPed DetallePedido[] // Conexión con las ventas
-  inventarios InventarioSede[] // Conexión con el stock en sedes
+  detallesPed DetallePedido[] 
+  inventarios InventarioSede[] 
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Categoria {
+  id        String     @id @default(uuid())
+  nombre    String     @unique 
+  productos Producto[]
+  activo    Boolean    @default(true)
 }
 
 // ==========================================
@@ -46,36 +93,36 @@ model Producto {
 
 model Sede {
   id          String     @id @default(uuid())
-  nombre      String     // ej: "Sede Principal Lima", "Almacén Callao"
+  nombre      String     
   direccion   String
   ciudad      String
+  activo      Boolean    @default(true)
   
   empleados   Empleado[] 
-  pedidos     Pedido[]   // Para saber desde qué sede se despachó una venta
-  inventarios InventarioSede[] // Conexión con el stock de esta sede
+  pedidos     Pedido[]   
+  inventarios InventarioSede[] 
   
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
 
 model Empleado {
-  id               String   @id @default(uuid())
-  dni              String   @unique
+  id               String         @id @default(uuid())
+  dni              String         @unique
   telefono         String?
-  cargo            String   // ej: "Vendedor", "Gerente", "Almacenero"
+  cargo            String   
   salario          Float
-  fechaContratacion DateTime @default(now())
+  estado           EstadoEmpleado @default(ACTIVO) // <--- Estado Profesional
+  fechaContratacion DateTime       @default(now())
 
-  // Relación: En qué sede trabaja
   sedeId           String
-  sede             Sede     @relation(fields: [sedeId], references: [id])
+  sede             Sede           @relation(fields: [sedeId], references: [id])
 
-  // Relación 1 a 1: Credenciales de acceso del empleado
-  usuarioId        String   @unique
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId        String         @unique
+  usuario          Usuario        @relation(fields: [usuarioId], references: [id])
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 // ==========================================
@@ -83,44 +130,42 @@ model Empleado {
 // ==========================================
 
 model Usuario {
-  id        String    @id @default(uuid())
+  id        String        @id @default(uuid())
   nombre    String
   apellido  String?
-  email     String    @unique
-  password  String    // Contraseña encriptada
-  rol       String    @default("CLIENTE") // Puede ser "CLIENTE", "ADMIN", "EMPLEADO"
+  email     String        @unique
+  password  String    
+  rol       String        @default("CLIENTE") 
+  estado    EstadoUsuario @default(ACTIVO) // <--- Estado de Seguridad
   
-  empleado  Empleado? // Si el rol es EMPLEADO o ADMIN, tendrá estos datos extra
-  pedidos   Pedido[]  // Historial de compras del usuario
+  empleado  Empleado? 
+  pedidos   Pedido[]  
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 model Pedido {
-  id         String   @id @default(uuid())
+  id         String       @id @default(uuid())
   total      Float
-  estado     String   @default("PENDIENTE") // PENDIENTE, PAGADO, ENVIADO, ENTREGADO
+  estado     EstadoPedido @default(PENDIENTE) // <--- Flujo de Venta
   
-  // Quién compró
   usuarioId  String
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
 
-  // Desde dónde se despacha
   sedeId     String?
-  sede       Sede?    @relation(fields: [sedeId], references: [id])
+  sede       Sede?        @relation(fields: [sedeId], references: [id])
   
-  // Lo que compró
   detalles   DetallePedido[]
   
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
 model DetallePedido {
   id         String   @id @default(uuid())
   cantidad   Int
-  precioFijo Float    // Se guarda el precio congelado al momento de la venta
+  precioFijo Float    
   
   pedidoId   String
   pedido     Pedido   @relation(fields: [pedidoId], references: [id])
@@ -129,12 +174,9 @@ model DetallePedido {
   producto   Producto @relation(fields: [productoId], references: [id])
 }
 
-// ==========================================
-// 📦 NUEVA TABLA: STOCK MULTI-SEDE
-// ==========================================
 model InventarioSede {
   id         String   @id @default(uuid())
-  cantidad   Int      @default(0) // El stock real está aquí
+  cantidad   Int      @default(0) 
 
   productoId String
   producto   Producto @relation(fields: [productoId], references: [id])
@@ -142,6 +184,5 @@ model InventarioSede {
   sedeId     String
   sede       Sede     @relation(fields: [sedeId], references: [id])
 
-  // Candado: Evita registrar el mismo producto 2 veces en la misma sede
   @@unique([productoId, sedeId]) 
 }

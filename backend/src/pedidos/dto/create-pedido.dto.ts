@@ -1,29 +1,32 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, ArrayMinSize, ValidateNested, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { EstadoPedido } from '@prisma/client';
 
-// 1. Definimos cómo debe verse cada producto que entra en el carrito
-class DetalleCarritoDto {
-  @IsString()
+class DetallePedidoDto {
+  @IsUUID()
   @IsNotEmpty()
   productoId: string;
 
-  @IsNumber()
-  @Min(1, { message: 'La cantidad mínima es 1' })
+  @IsNotEmpty()
   cantidad: number;
 }
 
-// 2. Definimos cómo se ve el Pedido completo
 export class CreatePedidoDto {
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  usuarioId: string; // El cliente que está comprando
+  usuarioId: string;
 
-  @IsString()
-  @IsOptional()
-  sedeId?: string; // Opcional: Desde qué sede se despachará
+  @IsUUID()
+  @IsNotEmpty()
+  sedeId: string;
 
   @IsArray()
-  @ValidateNested({ each: true }) // Valida cada elemento del arreglo
-  @Type(() => DetalleCarritoDto) // Transforma el JSON al sub-DTO
-  detalles: DetalleCarritoDto[]; // La lista de compras
+  @ArrayMinSize(1, { message: 'El pedido debe tener al menos un producto' })
+  @ValidateNested({ each: true })
+  @Type(() => DetallePedidoDto)
+  detalles: DetallePedidoDto[];
+
+  @IsOptional()
+  @IsEnum(EstadoPedido)
+  estado?: EstadoPedido;
 }

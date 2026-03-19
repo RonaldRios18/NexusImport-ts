@@ -1,4 +1,5 @@
-import { IsString, IsNumber, IsOptional, Min, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsOptional, IsUrl, IsEnum } from 'class-validator';
+import { EstadoProducto } from '@prisma/client';
 
 export class CreateProductoDto {
   @IsString()
@@ -10,8 +11,17 @@ export class CreateProductoDto {
   precio: number;
 
   @IsString()
-  @IsNotEmpty()
-  categoria: string;
+  @IsNotEmpty({ message: 'El ID de la categoría es obligatorio' })
+  categoriaId: string;
+
+  @IsOptional()
+  @IsEnum(EstadoProducto, { message: 'Estado no válido' })
+  estado?: EstadoProducto;
+
+  @IsString()
+  @IsOptional()
+  @IsUrl({}, { message: 'La imagen debe ser una URL válida' })
+  imagen?: string;
 
   @IsString()
   @IsOptional()

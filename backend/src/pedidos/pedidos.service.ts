@@ -9,35 +9,23 @@ export class PedidosService {
 
   async create(createPedidoDto: CreatePedidoDto) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Candado de seguridad: Para vender multi-sede, necesitamos saber de qué sede sale
-      if (!createPedidoDto.sedeId) {
-        throw new BadRequestException('Debe especificar el ID de la sede (sedeId) para despachar el pedido.');
-      }
-
       let totalCalculado = 0;
       const detallesParaGuardar: { productoId: string; cantidad: number; precioFijo: number }[] = [];
 
-      // 2. Recorremos el carrito
       for (const item of createPedidoDto.detalles) {
-        // Buscamos el producto para obtener su precio real
+        // 1. Buscamos el producto
         const producto = await tx.producto.findUnique({ where: { id: item.productoId } });
-        if (!producto) {
-          throw new NotFoundException(`El producto con ID ${item.productoId} no existe.`);
+        if (!producto || producto.estado !== 'ACTIVO') {
+          throw new NotFoundException(`Producto ${item.productoId} no disponible`);
         }
 
-        // 3. LA MAGIA MULTI-SEDE: Buscamos el stock exacto en la sede solicitada
+        // 2. Buscamos stock en la SEDE seleccionada
         const inventario = await tx.inventarioSede.findUnique({
-          where: {
-            productoId_sedeId: {
-              productoId: item.productoId,
-              sedeId: createPedidoDto.sedeId,
-            },
-          },
+          where: { productoId_sedeId: { productoId: item.productoId, sedeId: createPedidoDto.sedeId } }
         });
 
-        // 4. Verificamos si existe el registro y si alcanza la cantidad
         if (!inventario || inventario.cantidad < item.cantidad) {
-          throw new BadRequestException(`No hay stock suficiente para ${producto.nombre} en la sede seleccionada.`);
+          throw new BadRequestException(`Stock insuficiente para ${producto.nombre} en la sede elegida`);
         }
 
         totalCalculado += producto.precio * item.cantidad;
@@ -45,57 +33,55 @@ export class PedidosService {
         detallesParaGuardar.push({
           productoId: producto.id,
           cantidad: item.cantidad,
-          precioFijo: producto.precio,
+          precioFijo: producto.precio
         });
 
-        // 5. Descontamos el stock de la tabla InventarioSede (NO del Producto)
+        // 3. Descontamos el stock de la SEDE
         await tx.inventarioSede.update({
           where: { id: inventario.id },
-          data: { cantidad: inventario.cantidad - item.cantidad },
+          data: { cantidad: { decrement: item.cantidad } }
         });
       }
 
-      // 6. Creamos el ticket final
-      const nuevoPedido = await tx.pedido.create({
+      // 4. Creamos el pedido con su estado inicial PENDIENTE
+      return tx.pedido.create({
         data: {
           usuarioId: createPedidoDto.usuarioId,
           sedeId: createPedidoDto.sedeId,
           total: totalCalculado,
-          detalles: { create: detallesParaGuardar },
+          detalles: { create: detallesParaGuardar }
         },
-        include: { detalles: true },
+        include: { detalles: true }
       });
-
-      return nuevoPedido;
     });
   }
 
+  async update(id: string, updatePedidoDto: UpdatePedidoDto) {
+    // 1. Extraemos 'detalles' y guardamos el resto en 'dataAActualizar'
+    const { detalles, ...dataAActualizar } = updatePedidoDto;
+
+    return this.prisma.pedido.update({
+      where: { id },
+      // 2. Ahora sí, le pasamos solo los campos simples (total, estado, etc.)
+      data: dataAActualizar,
+    });
+  }
   findAll() {
     return this.prisma.pedido.findMany({
       include: {
         usuario: { select: { nombre: true, email: true } },
-        sede: { select: { nombre: true, ciudad: true } },
+        sede: { select: { nombre: true } },
         detalles: { include: { producto: true } }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.pedido.findUnique({
+  // ELIMINAR = CANCELAR (Nunca se borra una transacción financiera)
+  async remove(id: string) {
+    return this.prisma.pedido.update({
       where: { id },
-      include: { detalles: { include: { producto: true } } }
+      data: { estado: 'CANCELADO' }
     });
-  }
-
-  update(id: string, updatePedidoDto: UpdatePedidoDto) {
-    const { detalles, ...dataAActualizar } = updatePedidoDto;
-    return this.prisma.pedido.update({ 
-      where: { id }, 
-      data: dataAActualizar 
-    });
-  }
-
-  remove(id: string) {
-    return this.prisma.pedido.delete({ where: { id } });
   }
 }

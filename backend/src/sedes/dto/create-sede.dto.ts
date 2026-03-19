@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateSedeDto {
   @IsString()
@@ -6,10 +6,14 @@ export class CreateSedeDto {
   nombre: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'La dirección es obligatoria' })
   direccion: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'La ciudad es obligatoria' })
   ciudad: string;
+
+  @IsBoolean()
+  @IsOptional()
+  activo?: boolean;
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { PedidosService } from './pedidos.service';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
@@ -17,18 +17,16 @@ export class PedidosController {
     return this.pedidosService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.pedidosService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePedidoDto: UpdatePedidoDto) {
-    return this.pedidosService.update(id, updatePedidoDto);
-  }
+ @Patch(':id')update(
+  @Param('id', ParseUUIDPipe) id: string, 
+  @Body() updatePedidoDto: UpdatePedidoDto
+) {
+  // Aquí estaba el error: Deben ser dos argumentos separados por coma
+  return this.pedidosService.update(id, updatePedidoDto);
+}
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.pedidosService.remove(id);
   }
 }

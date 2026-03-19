@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,49 +8,58 @@ export class ProductosService {
   constructor(private prisma: PrismaService) {}
 
   create(createProductoDto: CreateProductoDto) {
-    // Extraemos proveedorId para manejarlo con cuidado
-    const { proveedorId, ...datosProducto } = createProductoDto;
+    const { proveedorId, categoriaId, ...datosProducto } = createProductoDto;
 
     return this.prisma.producto.create({
       data: {
         ...datosProducto,
-        // Si viene un proveedorId, lo conectamos, si no, no hacemos nada
-        ...(proveedorId && { proveedorId }), 
-      },
-    });
-  }
-
-  findAll() {
-    return this.prisma.producto.findMany({
-      include: {
-        proveedor: true,
-        inventarios: { include: { sede: true } } // Muestra el stock en cada sede
-      },
-    });
-  }
-
-  findOne(id: string) {
-    return this.prisma.producto.findUnique({ 
-      where: { id },
-      include: {
-        proveedor: true,
-        inventarios: { include: { sede: true } }
-      }
-    });
-  }
-
-  update(id: string, updateProductoDto: UpdateProductoDto) {
-    const { proveedorId, ...datosProducto } = updateProductoDto;
-    return this.prisma.producto.update({
-      where: { id },
-      data: {
-        ...datosProducto,
+        categoriaId,
         ...(proveedorId && { proveedorId }),
       },
     });
   }
 
+  findAll() {
+    // Solo mostramos productos que no estén descontinuados para el catálogo general
+    return this.prisma.producto.findMany({
+      where: {
+        estado: { not: 'DESCONTINUADO' }
+      },
+      include: {
+        categoria: { select: { nombre: true } },
+        inventarios: { select: { cantidad: true, sede: { select: { nombre: true } } } }
+      },
+    });
+  }
+
+  async findOne(id: string) {
+    const producto = await this.prisma.producto.findUnique({
+      where: { id },
+      include: { categoria: true, proveedor: true, inventarios: true }
+    });
+
+    if (!producto) throw new NotFoundException(`Producto con ID ${id} no encontrado`);
+    return producto;
+  }
+
+  update(id: string, updateProductoDto: UpdateProductoDto) {
+    const { proveedorId, categoriaId, ...datosProducto } = updateProductoDto;
+    
+    return this.prisma.producto.update({
+      where: { id },
+      data: {
+        ...datosProducto,
+        ...(categoriaId && { categoriaId }),
+        ...(proveedorId && { proveedorId }),
+      },
+    });
+  }
+
+  // BORRADO LÓGICO PROFESIONAL
   remove(id: string) {
-    return this.prisma.producto.delete({ where: { id } });
+    return this.prisma.producto.update({
+      where: { id },
+      data: { estado: 'DESCONTINUADO' },
+    });
   }
 }

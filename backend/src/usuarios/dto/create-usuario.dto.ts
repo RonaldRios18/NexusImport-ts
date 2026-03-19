@@ -1,24 +1,26 @@
-import { IsString, IsEmail, IsNotEmpty, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsOptional, MinLength } from 'class-validator';
+import { EstadoUsuario } from '@prisma/client';
 
 export class CreateUsuarioDto {
   @IsString()
-  @IsNotEmpty({ message: 'El nombre es obligatorio' })
   nombre: string;
 
   @IsString()
   @IsOptional()
   apellido?: string;
 
-  @IsEmail({}, { message: 'El formato del correo no es válido' })
-  @IsNotEmpty()
+  @IsEmail({}, { message: 'El correo electrónico no es válido' })
   email: string;
 
   @IsString()
-  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
-  @IsNotEmpty()
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   password: string;
 
   @IsString()
   @IsOptional()
-  rol?: string; // Opcional porque Prisma le pone 'CLIENTE' por defecto
+  rol?: string;
+
+  @IsEnum(EstadoUsuario)
+  @IsOptional()
+  estado?: EstadoUsuario;
 }

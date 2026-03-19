@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { EstadoEmpleado } from '@prisma/client';
 
 export class CreateEmpleadoDto {
   @IsString()
@@ -17,11 +18,15 @@ export class CreateEmpleadoDto {
   @Min(0)
   salario: number;
 
-  @IsString()
-  @IsNotEmpty()
-  sedeId: string; // En qué sede trabaja
+  @IsEnum(EstadoEmpleado)
+  @IsOptional()
+  estado?: EstadoEmpleado;
 
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  usuarioId: string; // Su cuenta de usuario para el login
+  sedeId: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  usuarioId: string;
 }

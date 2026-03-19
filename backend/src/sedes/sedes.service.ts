@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSedeDto } from './dto/create-sede.dto';
 import { UpdateSedeDto } from './dto/update-sede.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,22 +8,50 @@ export class SedesService {
   constructor(private prisma: PrismaService) {}
 
   create(createSedeDto: CreateSedeDto) {
-    return this.prisma.sede.create({ data: createSedeDto });
+    return this.prisma.sede.create({
+      data: createSedeDto,
+    });
   }
 
   findAll() {
-    return this.prisma.sede.findMany();
+    // Para el público o despacho, solo sedes activas
+    return this.prisma.sede.findMany({
+      where: { activo: true },
+    });
   }
 
-  findOne(id: string) {
-    return this.prisma.sede.findUnique({ where: { id } });
+  async findOne(id: string) {
+    const sede = await this.prisma.sede.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { empleados: true, inventarios: true }
+        }
+      }
+    });
+
+    if (!sede || !sede.activo) {
+      throw new NotFoundException(`Sede con ID ${id} no encontrada o inactiva`);
+    }
+    return sede;
   }
 
   update(id: string, updateSedeDto: UpdateSedeDto) {
-    return this.prisma.sede.update({ where: { id }, data: updateSedeDto });
+    return this.prisma.sede.update({
+      where: { id },
+      data: updateSedeDto,
+    });
   }
 
-  remove(id: string) {
-    return this.prisma.sede.delete({ where: { id } });
+  // BORRADO LÓGICO: Desactivar Sede
+  async remove(id: string) {
+    try {
+      return await this.prisma.sede.update({
+        where: { id },
+        data: { activo: false },
+      });
+    } catch (error) {
+      throw new NotFoundException(`No se pudo desactivar la sede con ID ${id}`);
+    }
   }
 }
