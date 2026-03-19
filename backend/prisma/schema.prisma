@@ -1,20 +1,27 @@
-generator client {
-  provider = "prisma-client-js"
-  
-}
-
-datasource db {
-  provider = "postgresql"
+model Proveedor {
+  id        String     @id @default(uuid())
+  razonSocial String
+  ruc       String     @unique
+  pais      String     // Para saber de dónde importamos
+  contacto  String?
+  productos Producto[] // Un proveedor tiene MUCHOS productos
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Producto {
-  id        String   @id @default(uuid())
-  nombre    String
-  precio    Float
-  stock     Int
-  categoria String
-  marca     String?
-  detalles  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String     @id @default(uuid())
+  nombre      String
+  precio      Float
+  stock       Int
+  categoria   String
+  marca       String?  
+  detalles    String?
+  
+  // Aquí creamos la relación con el Proveedor
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+  proveedorId String?    // Es opcional por ahora para no romper los datos que ya creaste
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
