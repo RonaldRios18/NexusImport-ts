@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/client"  // <-- ESTA ES LA CLAVE DE PRISMA 7
+  
 }
 
 datasource db {
