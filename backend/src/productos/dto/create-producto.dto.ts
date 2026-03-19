@@ -24,4 +24,8 @@ export class CreateProductoDto {
   @IsString()
   @IsOptional()
   detalles?: string;
+
+  @IsString()
+  @IsOptional()
+  proveedorId?: string;
 }

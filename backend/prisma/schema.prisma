@@ -6,13 +6,17 @@ datasource db {
   provider = "postgresql"
 }
 
+// ==========================================
+// 🏭 MÓDULO DE INVENTARIO Y COMPRAS
+// ==========================================
+
 model Proveedor {
   id          String     @id @default(uuid())
   razonSocial String
   ruc         String     @unique
-  pais        String     // Para saber de dónde importamos
+  pais        String     
   contacto    String?
-  productos   Producto[] // Un proveedor tiene MUCHOS productos
+  productos   Producto[] 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
@@ -26,10 +30,99 @@ model Producto {
   marca       String?  
   detalles    String?
   
-  // Relación con el Proveedor
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
-  proveedorId String?    // Opcional por ahora para no romper datos existentes
+  proveedorId String?    
+  
+  detallesPed DetallePedido[] // Conexión con las ventas
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ==========================================
+// 🏢 MÓDULO DE RECURSOS HUMANOS (ERP)
+// ==========================================
+
+model Sede {
+  id          String     @id @default(uuid())
+  nombre      String     // ej: "Sede Principal Lima", "Almacén Callao"
+  direccion   String
+  ciudad      String
+  
+  empleados   Empleado[] 
+  pedidos     Pedido[]   // Para saber desde qué sede se despachó una venta
   
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+model Empleado {
+  id               String   @id @default(uuid())
+  dni              String   @unique
+  telefono         String?
+  cargo            String   // ej: "Vendedor", "Gerente", "Almacenero"
+  salario          Float
+  fechaContratacion DateTime @default(now())
+
+  // Relación: En qué sede trabaja
+  sedeId           String
+  sede             Sede     @relation(fields: [sedeId], references: [id])
+
+  // Relación 1 a 1: Credenciales de acceso del empleado
+  usuarioId        String   @unique
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ==========================================
+// 🛒 MÓDULO DE E-COMMERCE Y SEGURIDAD
+// ==========================================
+
+model Usuario {
+  id        String    @id @default(uuid())
+  nombre    String
+  apellido  String?
+  email     String    @unique
+  password  String    // Contraseña encriptada
+  rol       String    @default("CLIENTE") // Puede ser "CLIENTE", "ADMIN", "EMPLEADO"
+  
+  empleado  Empleado? // Si el rol es EMPLEADO o ADMIN, tendrá estos datos extra
+  pedidos   Pedido[]  // Historial de compras del usuario
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Pedido {
+  id         String   @id @default(uuid())
+  total      Float
+  estado     String   @default("PENDIENTE") // PENDIENTE, PAGADO, ENVIADO, ENTREGADO
+  
+  // Quién compró
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+
+  // Desde dónde se despacha (Opcional, se asigna cuando el empleado lo procesa)
+  sedeId     String?
+  sede       Sede?    @relation(fields: [sedeId], references: [id])
+  
+  // Lo que compró
+  detalles   DetallePedido[]
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model DetallePedido {
+  id         String   @id @default(uuid())
+  cantidad   Int
+  precioFijo Float    // Se guarda el precio congelado al momento de la venta
+  
+  pedidoId   String
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id])
+  
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
 }
