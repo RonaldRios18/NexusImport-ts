@@ -25,7 +25,7 @@ model Producto {
   id          String     @id @default(uuid())
   nombre      String
   precio      Float
-  stock       Int
+  // ¡Adiós stock global! Ahora se maneja por sede
   categoria   String
   marca       String?  
   detalles    String?
@@ -34,6 +34,7 @@ model Producto {
   proveedorId String?    
   
   detallesPed DetallePedido[] // Conexión con las ventas
+  inventarios InventarioSede[] // Conexión con el stock en sedes
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -51,6 +52,7 @@ model Sede {
   
   empleados   Empleado[] 
   pedidos     Pedido[]   // Para saber desde qué sede se despachó una venta
+  inventarios InventarioSede[] // Conexión con el stock de esta sede
   
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -104,7 +106,7 @@ model Pedido {
   usuarioId  String
   usuario    Usuario  @relation(fields: [usuarioId], references: [id])
 
-  // Desde dónde se despacha (Opcional, se asigna cuando el empleado lo procesa)
+  // Desde dónde se despacha
   sedeId     String?
   sede       Sede?    @relation(fields: [sedeId], references: [id])
   
@@ -125,4 +127,21 @@ model DetallePedido {
   
   productoId String
   producto   Producto @relation(fields: [productoId], references: [id])
+}
+
+// ==========================================
+// 📦 NUEVA TABLA: STOCK MULTI-SEDE
+// ==========================================
+model InventarioSede {
+  id         String   @id @default(uuid())
+  cantidad   Int      @default(0) // El stock real está aquí
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  sedeId     String
+  sede       Sede     @relation(fields: [sedeId], references: [id])
+
+  // Candado: Evita registrar el mismo producto 2 veces en la misma sede
+  @@unique([productoId, sedeId]) 
 }

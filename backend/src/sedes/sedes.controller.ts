@@ -8,27 +8,17 @@ export class SedesController {
   constructor(private readonly sedesService: SedesService) {}
 
   @Post()
-  create(@Body() createSedeDto: CreateSedeDto) {
-    return this.sedesService.create(createSedeDto);
-  }
+  create(@Body() createSedeDto: CreateSedeDto) { return this.sedesService.create(createSedeDto); }
 
   @Get()
-  findAll() {
-    return this.sedesService.findAll();
-  }
+  findAll() { return this.sedesService.findAll(); }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.sedesService.findOne(+id);
-  }
+  findOne(@Param('id') id: string) { return this.sedesService.findOne(id); }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSedeDto: UpdateSedeDto) {
-    return this.sedesService.update(+id, updateSedeDto);
-  }
+  update(@Param('id') id: string, @Body() updateSedeDto: UpdateSedeDto) { return this.sedesService.update(id, updateSedeDto); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.sedesService.remove(+id);
-  }
+  remove(@Param('id') id: string) { return this.sedesService.remove(id); }
 }

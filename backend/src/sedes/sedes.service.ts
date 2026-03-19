@@ -1,26 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { CreateSedeDto } from './dto/create-sede.dto';
 import { UpdateSedeDto } from './dto/update-sede.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SedesService {
+  constructor(private prisma: PrismaService) {}
+
   create(createSedeDto: CreateSedeDto) {
-    return 'This action adds a new sede';
+    return this.prisma.sede.create({ data: createSedeDto });
   }
 
   findAll() {
-    return `This action returns all sedes`;
+    return this.prisma.sede.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} sede`;
+  findOne(id: string) {
+    return this.prisma.sede.findUnique({ where: { id } });
   }
 
-  update(id: number, updateSedeDto: UpdateSedeDto) {
-    return `This action updates a #${id} sede`;
+  update(id: string, updateSedeDto: UpdateSedeDto) {
+    return this.prisma.sede.update({ where: { id }, data: updateSedeDto });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} sede`;
+  remove(id: string) {
+    return this.prisma.sede.delete({ where: { id } });
   }
 }

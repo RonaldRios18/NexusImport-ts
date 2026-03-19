@@ -8,31 +8,49 @@ export class ProductosService {
   constructor(private prisma: PrismaService) {}
 
   create(createProductoDto: CreateProductoDto) {
+    // Extraemos proveedorId para manejarlo con cuidado
+    const { proveedorId, ...datosProducto } = createProductoDto;
+
     return this.prisma.producto.create({
-      data: createProductoDto,
+      data: {
+        ...datosProducto,
+        // Si viene un proveedorId, lo conectamos, si no, no hacemos nada
+        ...(proveedorId && { proveedorId }), 
+      },
     });
   }
 
   findAll() {
-    return this.prisma.producto.findMany();
+    return this.prisma.producto.findMany({
+      include: {
+        proveedor: true,
+        inventarios: { include: { sede: true } } // Muestra el stock en cada sede
+      },
+    });
   }
 
   findOne(id: string) {
-    return this.prisma.producto.findUnique({
+    return this.prisma.producto.findUnique({ 
       where: { id },
+      include: {
+        proveedor: true,
+        inventarios: { include: { sede: true } }
+      }
     });
   }
 
   update(id: string, updateProductoDto: UpdateProductoDto) {
+    const { proveedorId, ...datosProducto } = updateProductoDto;
     return this.prisma.producto.update({
       where: { id },
-      data: updateProductoDto,
+      data: {
+        ...datosProducto,
+        ...(proveedorId && { proveedorId }),
+      },
     });
   }
 
   remove(id: string) {
-    return this.prisma.producto.delete({
-      where: { id },
-    });
+    return this.prisma.producto.delete({ where: { id } });
   }
 }
