@@ -1,15 +1,15 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ProveedoresService } from './proveedores.service';
-import { CreateProveedoreDto } from './dto/create-proveedore.dto';
-import { UpdateProveedoreDto } from './dto/update-proveedore.dto';
+import { CreateProveedorDto } from './dto/create-proveedores.dto';
+import { UpdateProveedorDto } from './dto/update-proveedores.dto';
 
 @Controller('proveedores')
 export class ProveedoresController {
   constructor(private readonly proveedoresService: ProveedoresService) {}
 
   @Post()
-  create(@Body() createProveedoreDto: CreateProveedoreDto) {
-    return this.proveedoresService.create(createProveedoreDto);
+  create(@Body() createProveedorDto: CreateProveedorDto) {
+    return this.proveedoresService.create(createProveedorDto);
   }
 
   @Get()
@@ -19,16 +19,16 @@ export class ProveedoresController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.proveedoresService.findOne(+id);
+    return this.proveedoresService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProveedoreDto: UpdateProveedoreDto) {
-    return this.proveedoresService.update(+id, updateProveedoreDto);
+  update(@Param('id') id: string, @Body() updateProveedorDto: UpdateProveedorDto) {
+    return this.proveedoresService.update(id, updateProveedorDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.proveedoresService.remove(+id);
+    return this.proveedoresService.remove(id);
   }
 }
